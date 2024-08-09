@@ -1,9 +1,42 @@
+import { useDispatch, useSelector } from "react-redux";
+import { toggleMenu } from "../utils/appSlice";
+import { useEffect, useState } from "react";
+import { YOUTUBE_SUGGESTION_API } from "../utils/constant";
+import { addItemToCache } from "../utils/searchSlice";
+
 const Head = () => {
+  const dispatch = useDispatch();
+
+  const [searchValue, setSearchValue] = useState('');
+  const [searchItemList, setSearchItem] = useState([]);
+  const [showSuggestion, toggleSuggestion] = useState(false)
+  const cachedItems = useSelector(store => store.search)
+  
+
+  const getSearchSuggestion = async () => {
+    if (cachedItems[searchValue]) {
+      setSearchItem(cachedItems[searchValue])
+    } else {
+      const data = await fetch(YOUTUBE_SUGGESTION_API+searchValue);
+      const json = await data.json();
+      setSearchItem(json[1]);
+      dispatch(addItemToCache({[searchValue] : json[1]}))
+    }
+  }
+ 
+  useEffect(() => { 
+    const timer = setTimeout(() => getSearchSuggestion(), 200)
+    return () => {
+      clearInterval(timer);
+    }
+  }, [searchValue]);
+
   return (
     <div className="grid grid-flow-col p-5 shadow-lg">
       <div className="col-span-1">
         <img
-          className="h-8"
+          onClick={() => dispatch(toggleMenu())}
+          className="h-8 cursor-pointer"
           alt="menu"
           src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAOEAAADhCAMAAAAJbSJIAAAAYFBMVEX///8CAgIAAADb29vDw8OxsbHt7e3y8vK4uLiampo7OztmZmaAgIC8vLzT09NhYWEcHBxxcXHi4uITExOioqJXV1eHh4dMTEx7e3uQkJAnJyc1NTX5+fnW1tbJyclAQEBzZbpGAAABTUlEQVR4nO3cC1LCQAwG4LK8lYcioCLi/W9pGa9gkyH9vgt0/tmhGzbNdh0AAAAAAAAAAAAAAAAAAABEW0yHtkzNt9u/tKFdXg95AdeDx/uzygo4b20SobVdTsBlUMA+4ltOwmNUwH4RZykJT2EJJ+2ckvApMOFzSsL3wIQfKQk/AxPOUxJO496lLamw2YTth8ecgF23bwEZ+2dssgL2W+IloGb7Siva7q671XxY2+/MfAAAAAAPY3GbDeuW2wOe/QSctZ2Suod35xZzXpp2ILwOO/Pe5gQ8BPaArykJ14E94JxFjOwf5nQu9ID/M2HOGtb/HdZ/l9bfD0dQ04ygLu3q/7cAAAAAeBDlv9UvP29Rfmam/NxT/dm1+vOH9WdI6/eA689y15/Hr3+nQv17MUZwt8kI7qfp6t8xBAAAAAAAAAAAAAAAAAAAwDj9AgjsI6cJ8n2yAAAAAElFTkSuQmCC"></img>
         <img
@@ -13,10 +46,21 @@ const Head = () => {
       </div>
       <div className="col-span-10 ">
         <input
+          value={searchValue}
           type="text"
           placeholder="Search"
-          className="w-1/2 p-1.5 rounded-l-full px-4"></input>
+          className="w-1/2 p-1.5 rounded-l-full px-4"
+          onInput={(e) => setSearchValue(e.target.value)}
+          onFocus={() => toggleSuggestion(true)}
+          onBlur={ ()=>toggleSuggestion(false)}
+        ></input>
         <button className="p-1.5 rounded-r-full">Search</button>
+        {
+          searchItemList?.length && showSuggestion ? <div className="fixed w-[35rem] bg-white rounded-lg shadow-lg">
+            {searchItemList.map((data, index) => <div key={index} className="p-2 cursor-pointer border-2 border-b-black-500">{ data}</div>)}
+        </div> :""
+        }
+        
       </div>
       <div className="col-span-1">
         <img
